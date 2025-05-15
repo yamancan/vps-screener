@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -74,7 +75,7 @@ func SendMetrics(cfg *config.Config, metrics collector.CollectedMetrics) error {
 		return nil
 	} else {
 		// TODO: Implement local buffering here as per Technical Blueprint
-		bodyBytes, _ := os.ReadAll(resp.Body) // Read body for more context on error
+		bodyBytes, _ := io.ReadAll(resp.Body)
 		log.Printf("Error sending metrics to %s. Status: %s, Body: %s. (Buffering not yet implemented)", metricsEndpoint, resp.Status, string(bodyBytes))
 		return fmt.Errorf("API gateway at %s returned error status %s", metricsEndpoint, resp.Status)
 	}
