@@ -19,10 +19,10 @@ apt-get install -y git
 
 # Install Go
 echo "Installing Go..."
-wget https://go.dev/dl/go1.16.15.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.21.10.linux-amd64.tar.gz
 rm -rf /usr/local/go
-tar -C /usr/local -xzf go1.16.15.linux-amd64.tar.gz
-rm go1.16.15.linux-amd64.tar.gz
+tar -C /usr/local -xzf go1.21.10.linux-amd64.tar.gz
+rm go1.21.10.linux-amd64.tar.gz
 
 # Verify Go installation
 echo "Verifying Go installation..."
@@ -214,4 +214,4 @@ fi
 echo "Recent logs:"
 tail -n 20 agent.log
 
-echo "Setup complete!" 
+echo "Setup complete!"

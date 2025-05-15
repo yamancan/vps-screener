@@ -123,7 +123,7 @@ projects:
 As defined in `go.mod`:
 
 - `gopkg.in/yaml.v3`: For parsing the `config.yaml` file.
-- `github.com/shirou/gopsutil/v3`: A comprehensive cross-platform library for retrieving system and process information (CPU, memory, disk, network, process details, etc.).
+- ` Acomprehensive cross-platform library for retrieving system and process information (CPU, memory, disk, network, process details, etc.).
 
 Standard Go library packages are used for HTTP communication, JSON handling, OS interaction, etc.
 
