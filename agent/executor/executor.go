@@ -22,7 +22,8 @@ type Task struct {
 	ProjectID string `json:"project_id,omitempty"` // Optional: for context
 }
 
-// TaskResult defines the structure for sending back the outcome of a task.	ype TaskResult struct {
+// TaskResult defines the structure for sending back the outcome of a task.
+type TaskResult struct {
 	Status string `json:"status"` // e.g., "completed", "failed", "timed_out", "error"
 	Output string `json:"output"` // Combined stdout and stderr
 }

@@ -213,9 +213,9 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		}
 
 		// 3. Process Name
-		if match.ProcessName != "" {
-			if pinfo.Name == match.ProcessName {
-				log.Printf("PID %d (%s) matched project '%s' by process name", info.PID, pinfo.Name, proj.Name)
+		if match.ProcessNamePattern != "" {
+			if pinfo.Name == match.ProcessNamePattern {
+				log.Printf("PID %d (%s) matched project '%s' by process name pattern", info.PID, pinfo.Name, proj.Name)
 				return proj.Name
 			}
 		}
@@ -228,13 +228,15 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 			}
 		}
 
-		// 5. Command Line
-		if match.CmdLine != "" {
+		// 5. Command Line (Field match.CmdLine does not exist in config.ProjectMatch)
+		/*
+		if match.CmdLine != "" { 
 			if strings.Contains(pinfo.CmdLine, match.CmdLine) {
 				log.Printf("PID %d (%s) matched project '%s' by command line: %s", info.PID, pinfo.Name, proj.Name, match.CmdLine)
 				return proj.Name
 			}
 		}
+		*/
 	}
 
 	return ""

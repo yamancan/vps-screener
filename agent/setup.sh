@@ -127,21 +127,19 @@ echo "Updating go.mod..."
 cat > go.mod << 'EOL'
 module vps-agent
 
-go 1.16
+go 1.21
 
 require (
-	github.com/elastic/go-sysinfo v1.7.1
-	github.com/gorilla/websocket v1.4.2
+	github.com/elastic/go-sysinfo v1.11.1
+	github.com/gorilla/websocket v1.5.1
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )
 
-require (
-	github.com/elastic/go-windows v1.0.0 // indirect
-	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/procfs v0.0.11 // indirect
-	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
-)
+// Indirect dependencies will be populated by 'go mod tidy'
+// It is often better to let 'go mod tidy' manage the specifics of these
+// based on the direct dependencies listed above.
+// If specific indirect versions are absolutely required due to complex constraints,
+// they can be listed, but usually not necessary here.
 EOL
 
 # Update imports in all Go files
