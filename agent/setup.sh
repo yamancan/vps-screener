@@ -57,7 +57,6 @@ rm -f vps-agent agent.log
 # Create new directory
 echo "Creating new directory..."
 mkdir -p /root/vps-screener/agent
-cd /root/vps-screener/agent
 
 # Clean up temporary directory
 echo "Cleaning up temporary directory..."
@@ -88,8 +87,10 @@ echo "Copying files from repository..."
 cd /tmp/vps-screener/agent
 for file in $(find . -type f -not -name "setup.sh"); do
     if [ -f "$file" ]; then
-        echo "Copying $file..."
-        cp -r "$file" /root/vps-screener/agent/
+        # This copies files, flattening subdirectories from agent/ into /root/vps-screener/agent
+        # e.g. ./plugins/sample.py becomes /root/vps-screener/agent/sample.py
+        echo "Copying $file to /root/vps-screener/agent/$(basename "$file")"
+        cp "$file" "/root/vps-screener/agent/$(basename "$file")"
     fi
 done
 
@@ -99,15 +100,30 @@ rm -rf /tmp/vps-screener
 # Return to agent directory
 cd /root/vps-screener/agent
 
-# Create config directory
+# Setting up package structure
 echo "Setting up package structure..."
+mkdir -p collector
+mkdir -p mapper
+mkdir -p executor
+mkdir -p sender
 mkdir -p config
-if [ -f config.go ]; then
-    mv config.go config/
-fi
+mkdir -p plugins
+
+# Move Go files to their respective package directories
+echo "Moving Go files to their package directories..."
+if [ -f config.go ]; then mv config.go config/; fi
+if [ -f collector.go ]; then mv collector.go collector/; fi
+if [ -f mapper.go ]; then mv mapper.go mapper/; fi
+if [ -f executor.go ]; then mv executor.go executor/; fi
+if [ -f sender.go ]; then mv sender.go sender/; fi
+
+# Move plugin files
+echo "Moving plugin files..."
+if [ -f sample_plugin.py ]; then mv sample_plugin.py plugins/; fi
+if [ -f .gitkeep ]; then mv .gitkeep plugins/; fi # Assuming .gitkeep belongs to plugins
 
 # Update go.mod
-echo "Updating dependencies..."
+echo "Updating go.mod..."
 cat > go.mod << 'EOL'
 module vps-agent
 
@@ -130,6 +146,19 @@ EOL
 
 # Update imports in all Go files
 echo "Updating imports in Go files..."
+# Update fully qualified imports from old GitHub path
+find . -name "*.go" -type f -exec sed -i 's|github.com/yamancan/vps-screener/agent/config|vps-agent/config|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|github.com/yamancan/vps-screener/agent/collector|vps-agent/collector|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|github.com/yamancan/vps-screener/agent/executor|vps-agent/executor|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|github.com/yamancan/vps-screener/agent/mapper|vps-agent/mapper|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|github.com/yamancan/vps-screener/agent/sender|vps-agent/sender|g' {} +
+# Update any broader old module paths if they exist (e.g. "vps-screener/agent" without github prefix)
+find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/config|vps-agent/config|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/collector|vps-agent/collector|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/executor|vps-agent/executor|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/mapper|vps-agent/mapper|g' {} +
+find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/sender|vps-agent/sender|g' {} +
+# General catch-all for the base path
 find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/|vps-agent/|g' {} +
 
 # Build the agent
