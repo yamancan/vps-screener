@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/elastic/go-sysinfo"
-	"github.com/elastic/go-sysinfo/types"
 
 	"vps-screener/agent/config"
 	"vps-screener/agent/mapper" // Import the mapper package
@@ -77,21 +76,26 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 		return metrics
 	}
 
-	cpuInfo, err := host.CPUTime()
+	// Overall CPU Time (as a placeholder, not a percentage yet)
+	hostCPUTimes, err := host.CPUTime() // MODIFIED: Renamed for clarity
 	if err != nil {
-		log.Printf("Error getting CPU info: %v", err)
+		log.Printf("Error getting host CPU times: %v", err) // MODIFIED: Log message
 	} else {
-		metrics["_system"] = MetricData{
-			CPUPercent: cpuInfo.User + cpuInfo.System,
-		}
+		// Store total CPU time in seconds. THIS IS NOT A LIVE PERCENTAGE.
+		// Proper percentage calculation requires sampling over an interval.
+		// Ensure metrics["_system"] is initialized if it's the first metric being set.
+		systemMetricData := metrics["_system"]
+		systemMetricData.CPUPercent = hostCPUTimes.Total.Seconds() // MODIFIED: Use Total().Seconds()
+		metrics["_system"] = systemMetricData
 	}
 
-	memInfo, err := host.Memory()
+	// Overall Memory
+	hostMemInfo, err := host.Memory() // MODIFIED: Renamed for clarity
 	if err != nil {
-		log.Printf("Error getting memory info: %v", err)
+		log.Printf("Error getting host memory info: %v", err) // MODIFIED: Log message
 	} else {
-		systemMetrics := metrics["_system"]
-		systemMetrics.RAMPercent = float32(float64(memInfo.Used) / float64(memInfo.Total) * 100)
+		systemMetrics := metrics["_system"] // Get existing or newly created
+		systemMetrics.RAMPercent = float32(float64(hostMemInfo.Used) / float64(hostMemInfo.Total) * 100)
 		metrics["_system"] = systemMetrics
 	}
 
@@ -107,6 +111,9 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 
 	for _, p := range processes {
 		projectName := mapper.MapPIDToProject(p, cfg.Projects)
+		if projectName == "" { // MODIFIED: Skip processes not mapped to any project
+			continue
+		}
 
 		// Ensure project entry exists
 		currentProjectMetrics, ok := metrics[projectName]
@@ -116,38 +123,54 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 			}
 		}
 
-		// Get process info
-		procInfo, err := p.Info()
-		if err != nil {
-			continue
+		// Get process CPU usage percentage // MODIFIED BLOCK
+		processCPUPercent, cpuErr := p.CPUPercent()
+		if cpuErr == nil {
+			currentProjectMetrics.CPUPercent += processCPUPercent
+		} else {
+			log.Printf("Error getting CPU percent for PID %d: %v", p.PID(), cpuErr)
 		}
 
-		// Get CPU usage
-		cpuInfo, err := p.CPUTime()
-		if err == nil {
-			currentProjectMetrics.CPUPercent += cpuInfo.User + cpuInfo.System
-		}
-
-		// Get memory usage
-		memInfo, err := p.Memory()
-		if err == nil {
-			currentProjectMetrics.RAMBytes += memInfo.RSS
+		// Get process memory usage // MODIFIED BLOCK
+		procMemInfo, memErr := p.Memory() // Renamed for clarity
+		if memErr == nil {
+			currentProjectMetrics.RAMBytes += procMemInfo.Resident // Use .Resident
+		} else {
+			log.Printf("Error getting memory info for PID %d: %v", p.PID(), memErr)
 		}
 
 		currentProjectMetrics.ProcessCount++
 
-		// Execute plugin if configured and not yet executed for this project
-		if projectConfig, exists := cfg.Projects[projectName]; exists && !processedPlugins[projectName] {
-			if projectConfig.PluginPath != "" {
-				customMetrics, err := executePlugin(projectConfig.PluginPath, projectName)
-				if err != nil {
-					log.Printf("Error executing plugin for project %s: %v", projectName, err)
-					currentProjectMetrics.CustomMetrics["plugin_error"] = err.Error()
-				} else {
-					currentProjectMetrics.CustomMetrics = customMetrics
-				}
-				processedPlugins[projectName] = true
+		// Execute plugin if configured and not yet executed for this project // MODIFIED BLOCK
+		var projectRuleForPlugin *config.ProjectConfig
+		for i := range cfg.Projects { // Iterate to find the project rule by name
+			if cfg.Projects[i].Name == projectName {
+				projectRuleForPlugin = &cfg.Projects[i]
+				break
 			}
+		}
+
+		if projectRuleForPlugin != nil && projectRuleForPlugin.Plugin != "" && !processedPlugins[projectName] {
+			pluginExecutablePath := filepath.Join("plugins", projectRuleForPlugin.Plugin) // Construct path relative to 'plugins' dir
+			
+			customMetrics, pluginErr := executePlugin(pluginExecutablePath, projectName)
+			if pluginErr != nil {
+				log.Printf("Error executing plugin %s for project %s: %v", pluginExecutablePath, projectName, pluginErr)
+                if currentProjectMetrics.CustomMetrics == nil { // Ensure map is initialized before adding error
+                    currentProjectMetrics.CustomMetrics = make(map[string]interface{})
+                }
+				// Use a distinct key for plugin errors to avoid overwriting other custom metrics
+				currentProjectMetrics.CustomMetrics["plugin_error_"+projectRuleForPlugin.Plugin] = pluginErr.Error()
+			} else {
+                if currentProjectMetrics.CustomMetrics == nil { // Ensure map is initialized
+                    currentProjectMetrics.CustomMetrics = make(map[string]interface{})
+                }
+				// Merge plugin metrics.
+				for k, v := range customMetrics {
+					currentProjectMetrics.CustomMetrics[k] = v
+				}
+			}
+			processedPlugins[projectName] = true
 		}
 
 		metrics[projectName] = currentProjectMetrics
