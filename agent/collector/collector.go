@@ -85,7 +85,7 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 		// Proper percentage calculation requires sampling over an interval.
 		// Ensure metrics["_system"] is initialized if it's the first metric being set.
 		systemMetricData := metrics["_system"]
-		systemMetricData.CPUPercent = hostCPUTimes.Total.Seconds() // MODIFIED: Use Total().Seconds()
+		systemMetricData.CPUPercent = hostCPUTimes.Total().Seconds() // MODIFIED: Call Total() as a method
 		metrics["_system"] = systemMetricData
 	}
 
@@ -123,12 +123,13 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 			}
 		}
 
-		// Get process CPU usage percentage // MODIFIED BLOCK
-		processCPUPercent, cpuErr := p.CPUPercent()
+		// Get process CPU usage percentage // MODIFIED BLOCK to use CPUTime().Total().Seconds()
+		// (placeholder: total CPU time in seconds, not live percentage)
+		procCPUTimes, cpuErr := p.CPUTime()
 		if cpuErr == nil {
-			currentProjectMetrics.CPUPercent += processCPUPercent
+			currentProjectMetrics.CPUPercent += procCPUTimes.Total().Seconds() // Accumulating total CPU time in seconds
 		} else {
-			log.Printf("Error getting CPU percent for PID %d: %v", p.PID(), cpuErr)
+			log.Printf("Error getting CPU time for PID %d: %v", p.PID(), cpuErr)
 		}
 
 		// Get process memory usage // MODIFIED BLOCK
