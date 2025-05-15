@@ -32,12 +32,16 @@ export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
 
 # Verify Go installation
 echo "Verifying Go installation..."
-if ! command -v go &> /dev/null; then
-    echo "Error: Go is not installed"
+if [ ! -f /usr/local/go/bin/go ]; then
+    echo "Error: Go binary not found at /usr/local/go/bin/go"
     exit 1
 fi
 
-go version
+/usr/local/go/bin/go version
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to verify Go installation"
+    exit 1
+fi
 
 # Clean up any existing installation
 echo "Cleaning up old files..."
@@ -99,10 +103,10 @@ echo "Directory contents:"
 ls -la
 
 echo "Running go mod tidy..."
-go mod tidy
+/usr/local/go/bin/go mod tidy
 
 echo "Building with verbose output..."
-if ! go build -v -o vps-agent .; then
+if ! /usr/local/go/bin/go build -v -o vps-agent .; then
     echo "Error: Build failed"
     echo "Directory contents after failed build:"
     ls -la
