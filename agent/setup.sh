@@ -62,7 +62,7 @@ cd /root/vps-screener/agent
 # Download the latest code
 echo "Downloading latest code..."
 git clone https://github.com/yamancan/vps-screener.git /tmp/vps-screener
-cp -r /tmp/vps-screener/agent/* .
+cp -r /tmp/vps-screener/agent/README.md /tmp/vps-screener/agent/collector /tmp/vps-screener/agent/config /tmp/vps-screener/agent/config.example.yaml /tmp/vps-screener/agent/config.go /tmp/vps-screener/agent/config.yaml /tmp/vps-screener/agent/executor /tmp/vps-screener/agent/go.mod /tmp/vps-screener/agent/main.go /tmp/vps-screener/agent/mapper /tmp/vps-screener/agent/plugins /tmp/vps-screener/agent/sender .
 rm -rf /tmp/vps-screener
 
 # Create config directory
