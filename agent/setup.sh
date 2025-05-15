@@ -14,32 +14,19 @@ echo "Installing required packages..."
 apt-get update
 apt-get install -y git
 
-# Install Go
-echo "Installing Go..."
-wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
-rm -rf /usr/local/go
-tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
-rm go1.21.6.linux-amd64.tar.gz
-
 # Set up Go environment
 echo "Setting up Go environment..."
-export GOROOT=/usr/local/go
 export GOPATH=/root/go
-export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
+export PATH=$PATH:$GOPATH/bin
 
 # Verify Go installation
 echo "Verifying Go installation..."
 if ! command -v go &> /dev/null; then
-    echo "Error: Go is not installed or not in PATH"
+    echo "Error: Go is not installed"
     exit 1
 fi
 
-# Force using the new Go version
-/usr/local/go/bin/go version
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to verify Go installation"
-    exit 1
-fi
+go version
 
 # Clean up any existing installation
 echo "Cleaning up old files..."
@@ -73,20 +60,20 @@ echo "Updating dependencies..."
 cat > go.mod << 'EOL'
 module vps-agent
 
-go 1.21
+go 1.13
 
 require (
-	github.com/elastic/go-sysinfo v1.11.1
-	github.com/gorilla/websocket v1.5.1
-	gopkg.in/yaml.v3 v3.0.1
+	github.com/elastic/go-sysinfo v1.7.1
+	github.com/gorilla/websocket v1.4.2
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 )
 
 require (
 	github.com/elastic/go-windows v1.0.0 // indirect
 	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/procfs v0.12.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	github.com/prometheus/procfs v0.0.11 // indirect
+	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
 )
 EOL
 
@@ -96,8 +83,8 @@ find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/|vps-agent/|g' {}
 
 # Build the agent
 echo "Building agent..."
-/usr/local/go/bin/go mod tidy
-if ! /usr/local/go/bin/go build -v -o vps-agent .; then
+go mod tidy
+if ! go build -v -o vps-agent .; then
     echo "Error: Failed to build agent"
     exit 1
 fi
