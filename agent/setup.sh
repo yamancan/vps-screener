@@ -62,8 +62,31 @@ cd /root/vps-screener/agent
 # Download the latest code
 echo "Downloading latest code..."
 git clone https://github.com/yamancan/vps-screener.git /tmp/vps-screener
-cp -r /tmp/vps-screener/agent/README.md /tmp/vps-screener/agent/collector /tmp/vps-screener/agent/config /tmp/vps-screener/agent/config.example.yaml /tmp/vps-screener/agent/config.go /tmp/vps-screener/agent/config.yaml /tmp/vps-screener/agent/executor /tmp/vps-screener/agent/go.mod /tmp/vps-screener/agent/main.go /tmp/vps-screener/agent/mapper /tmp/vps-screener/agent/plugins /tmp/vps-screener/agent/sender .
+
+# Check repository structure
+echo "Checking repository structure..."
+if [ ! -d "/tmp/vps-screener/agent" ]; then
+    echo "Error: agent directory not found in repository"
+    echo "Repository contents:"
+    ls -la /tmp/vps-screener
+    exit 1
+fi
+
+# Copy files from repository
+echo "Copying files from repository..."
+cd /tmp/vps-screener/agent
+for file in $(find . -type f -not -name "setup.sh"); do
+    if [ -f "$file" ]; then
+        echo "Copying $file..."
+        cp -r "$file" /root/vps-screener/agent/
+    fi
+done
+
+# Clean up
 rm -rf /tmp/vps-screener
+
+# Return to agent directory
+cd /root/vps-screener/agent
 
 # Create config directory
 echo "Setting up package structure..."
