@@ -14,13 +14,20 @@ echo "Installing required packages..."
 apt-get update
 apt-get install -y git
 
-# Install Go from official source
-echo "Installing Go..."
-wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
-rm go1.21.6.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
-echo 'export PATH=$PATH:/usr/local/go/bin' >> /root/.bashrc
+# Set up Go environment
+echo "Setting up Go environment..."
+export GOROOT=/root/go
+export GOPATH=/root/go
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+# Verify Go installation
+echo "Verifying Go installation..."
+if ! command -v go &> /dev/null; then
+    echo "Error: Go is not installed or not in PATH"
+    exit 1
+fi
+
+go version
 
 # Clean up any existing installation
 echo "Cleaning up old files..."
