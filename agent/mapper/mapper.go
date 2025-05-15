@@ -253,8 +253,8 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		}
 
 		// 4. Username
-		if match.Username != "" {
-			if pinfo.Username == match.Username {
+		if match.User != "" {
+			if pinfo.Username == match.User {
 				log.Printf("PID %d (%s) matched project '%s' by username: %s", currentPID, pinfo.Name, proj.Name, pinfo.Username)
 				return proj.Name
 			}
