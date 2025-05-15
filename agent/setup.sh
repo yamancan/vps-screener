@@ -59,9 +59,20 @@ echo "Creating new directory..."
 mkdir -p /root/vps-screener/agent
 cd /root/vps-screener/agent
 
+# Clean up temporary directory
+echo "Cleaning up temporary directory..."
+rm -rf /tmp/vps-screener
+if [ -d "/tmp/vps-screener" ]; then
+    echo "Error: Failed to remove temporary directory"
+    exit 1
+fi
+
 # Download the latest code
 echo "Downloading latest code..."
-git clone https://github.com/yamancan/vps-screener.git /tmp/vps-screener
+if ! git clone https://github.com/yamancan/vps-screener.git /tmp/vps-screener; then
+    echo "Error: Failed to clone repository"
+    exit 1
+fi
 
 # Check repository structure
 echo "Checking repository structure..."
