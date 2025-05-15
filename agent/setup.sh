@@ -17,10 +17,18 @@ echo "Installing required packages..."
 apt-get update
 apt-get install -y git
 
+# Install Go
+echo "Installing Go..."
+wget https://go.dev/dl/go1.16.15.linux-amd64.tar.gz
+rm -rf /usr/local/go
+tar -C /usr/local -xzf go1.16.15.linux-amd64.tar.gz
+rm go1.16.15.linux-amd64.tar.gz
+
 # Set up Go environment
 echo "Setting up Go environment..."
+export GOROOT=/usr/local/go
 export GOPATH=/root/go
-export PATH=$PATH:$GOPATH/bin
+export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
 
 # Verify Go installation
 echo "Verifying Go installation..."
@@ -63,7 +71,7 @@ echo "Updating dependencies..."
 cat > go.mod << 'EOL'
 module vps-agent
 
-go 1.13
+go 1.16
 
 require (
 	github.com/elastic/go-sysinfo v1.7.1
