@@ -1,0 +1,46 @@
+# Agent Configuration
+
+api_gateway:
+  url: "http://localhost:3000/v1" # Target API Gateway
+  token: "your-secure-jwt-token"    # Agent's JWT token for authentication
+
+agent_settings:
+  collection_interval: 30 # Metrics collection interval in seconds
+  node_identifier: "" # Optional: Override default hostname. If empty, os.uname().nodename is used.
+
+# Project mapping configuration
+# The 'mapper.py' component of the agent will use this section to determine
+# how processes are assigned to projects.
+#
+# Match criteria can include:
+#   user: Exact Linux username
+#   systemd_unit: Name of the systemd unit (e.g., 'my-service.service')
+#   docker_label: A specific Docker label (e.g., 'com.example.project=ProjectA')
+#   container_name_pattern: Regex pattern for Docker container names
+#   process_name_pattern: Regex pattern for process names/command lines
+#
+# Order matters: The first matching project in this list will be chosen.
+projects:
+  - name: "ProjectA_Systemd"
+    match:
+      systemd_unit: "projectA.service"
+    plugin: "plugins/projectA_plugin.py" # Optional path to a custom metrics plugin
+
+  - name: "ProjectB_Docker"
+    match:
+      docker_label: "myapp.project=ProjectB"
+    # No plugin specified, will only collect standard resource metrics
+
+  - name: "ProjectC_User"
+    match:
+      user: "projCuser"
+
+  - name: "Catchall_Nginx"
+    match:
+      process_name_pattern: ".*nginx.*"
+
+  # It's good practice to have a default or 'unassigned' catch-all if desired,
+  # though the agent.py currently defaults unmapped processes to "unassigned".
+  # - name: "Other_System_Daemons"
+  #   match:
+  #     user: "root" # Example: be careful with broad matches like this 

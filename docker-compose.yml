@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # API Gateway - To be defined
+  # api-gateway:
+  #   build:
+  #     context: ./api-gateway
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./api-gateway/src:/app/src # For development hot-reloading
+  #   environment:
+  #     - DATABASE_URL=postgresql://user:password@postgres:5432/vpsmonitoring
+  #     - JWT_SECRET=your-super-secret
+  #   depends_on:
+  #     - postgres
+
+  # PostgreSQL Database - To be defined
+  # postgres:
+  #   image: postgres:15
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=user
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=vpsmonitoring
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+  # Dashboard - To be defined (if serving static build via Nginx)
+  # dashboard_nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ./dashboard/dist:/usr/share/nginx/html # Mount build output
+  #   depends_on:
+  #     - api-gateway
+
+  # Agent - Not typically run in Docker Compose for this project's premise,
+  # as it's meant to run directly on each VPS. However, you might define
+  # it here for a unified development/testing environment if desired.
+
+# volumes:
+#   postgres_data: 

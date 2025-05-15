@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        cd agent && go mod download
+        cd ../api-gateway && npm install
+        cd ../dashboard && npm install
+
+    - name: Build agent
+      run: cd agent && go build -v ./...
+
+    - name: Build API Gateway
+      run: cd api-gateway && npm run build
+
+    - name: Build Dashboard
+      run: cd dashboard && npm run build
+
+    - name: Run tests
+      run: |
+        cd agent && go test -v ./...
+        cd ../api-gateway && npm test
+        cd ../dashboard && npm test 

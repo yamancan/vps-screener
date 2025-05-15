@@ -1,0 +1,27 @@
+Project Prompt: Lightweight VPS Node & Project Monitoring Agent
+
+Goal
+Build a super-light agent that runs on each VPS, maps every running process to a "project," captures per-project resource usage and custom activity metrics, and ships that data (outbound-only) to a central API-Gateway. A React dashboard visualises node health, project status, and task results in real time.
+
+Core Objectives
+	1.	Per-Project Visibility – CPU, RAM, disk, network and custom metrics aggregated by project.
+	2.	Minimal Footprint – ≤ 2 % CPU, ≤ 100 MB RAM, outbound HTTPS only.
+	3.	Pluggable Activity Checks – Project-specific plugins (e.g. block-height, queue depth).
+	4.	Task Management – API can push small jobs to agents; results flow back.
+	5.	Self-Healing – systemd service with auto-restart; graceful error handling.
+
+Key Deliverables
+
+Layer	Deliverable
+Agent Worker	Go binary (config file, plugin SDK TBD, systemd unit)
+API-Gateway	NestJS (Node.js/TypeScript) service with JWT auth & Postgres
+Dashboard	React + Tailwind UI, project/node views, alert banners
+DevOps	Docker-compose stack, Nginx reverse proxy, CI tests
+Docs	README, deployment guide, plugin writing guide, OpenAPI spec
+
+Success Criteria
+	•	Agent deploys in one command, starts as a service, pushes metrics within 60 s.
+	•	Adding a new project plugin involves < 20 lines of code plus YAML entry.
+	•	Dashboard refreshes project stats < 3 s after API receives them.
+	•	Losing network for 5 min → data buffers locally and back-fills when online.
+

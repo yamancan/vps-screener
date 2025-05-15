@@ -1,0 +1,37 @@
+# VPS Agent Configuration Example
+
+# API Gateway connection details
+api_gateway:
+  url: https://api.example.com/v1/metrics
+  token: ${VPS_AGENT_TOKEN}  # Use environment variable for security
+
+# Metrics collection interval in seconds
+interval: 30
+
+# Project configurations
+projects:
+  # Example: A Node.js application running as a systemd service
+  web_app:
+    match:
+      systemd_service: web-app.service
+      user: webapp
+    plugin: plugins/web_app_metrics.py
+
+  # Example: A Docker container with a custom metrics plugin
+  database:
+    match:
+      docker_label: com.mycompany.project=database
+      docker_container_name: postgres-main
+    plugin: plugins/db_metrics.py
+
+  # Example: A process matched by name pattern
+  cache_server:
+    match:
+      process_name_pattern: "^/usr/local/bin/redis-server"
+    plugin: plugins/redis_metrics.py
+
+  # Example: A project without custom metrics
+  backup_service:
+    match:
+      systemd_service: backup.service
+      user: backup 

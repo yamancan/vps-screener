@@ -1,0 +1,40 @@
+
+1. Why We’re Building It
+	•	Unified View: Today each VPS is a black box. We need a single pane of glass that tells us which project is active, healthy, and productive.
+	•	Cost & Footprint: Third-party APM tools are heavy and pricey; a home-grown, < 2 % CPU / < 100 MB RAM agent keeps servers lean.
+	•	Task Automation: We frequently push small maintenance jobs (log rotation, cache clear, chain snapshot). A built-in task channel removes ad-hoc SSH.
+
+2. Product Scope (MVP)
+2. Product Scope (MVP)
+
+Area	Must-Have	Nice-to-Have
+Metrics	CPU, RAM, Disk, Net I/O per project; agent uptime	File-descriptor count, swap
+Activity	Project-specific plugin data (e.g. block height, queue size)	Error-log pattern alerts
+Transport	Outbound HTTPS with JWT	gRPC streaming
+API-Gateway	NestJS (Node.js/TypeScript) service with JWT auth & Postgres	
+Storage	Postgres (ORM: TypeORM or Prisma with NestJS; consider TimescaleDB for metrics)	Advanced TimescaleDB features (e.g., compression, continuous aggregates)
+Dashboard	Node list, project cards, alert badges	Dark mode, WebSocket live view
+Task System	API posts command, agent executes, posts result	Retry policies, cron templates 
+
+
+3. Non-Functional Requirements
+	1.	Security: All traffic TLS 1.3; no inbound ports opened on the VPS.
+	2.	Resilience: systemd Restart=always. Buffered writes when the API is unreachable.
+	3.	Extensibility: Plugin SDK—drop-in Python/Go/Rust module with collect() and health() hooks.
+	4.	Observability: Agent logs to stdout → journald; gateway logs via structured JSON.
+
+4. Deliverables & Timeline
+
+Week	Output
+1	Agent skeleton + config loader
+2	API skeleton + DB schema
+3	Metrics collection & push loop
+4	Dashboard base UI
+5	Plugin SDK + two sample plugins
+6	Task execution path
+7	Hardening, tests, docs
+
+
+⸻
+
+Next: I’ll share the deeper technical architecture (data models, endpoints, plugin API) followed by concrete instructions on how the agent detects and groups services on each node.

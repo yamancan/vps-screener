@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+instance/
+.venv/
+venv/
+ENV/
+env/
+
+# TypeScript / Build output
+*.tsbuildinfo
+dist/
+build/
+
+# IDE / OS specific
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.DS_Store
+Thumbs.db 
+ 
