@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
 	"strings"
 	"sync"
@@ -89,7 +90,12 @@ func procUsername(pid int32) string {
 		log.Printf("mapper: failed to get user info for PID %d: %v", pid, err)
 		return ""
 	}
-	return userInfo.Username
+	u, err := user.LookupId(userInfo.UID)
+	if err != nil {
+		log.Printf("mapper: could not lookup username for UID %s (PID %d): %v", userInfo.UID, pid, err)
+		return ""
+	}
+	return u.Username
 }
 
 // GetDockerContainerIDForPid attempts to find the Docker container ID for a PID.
@@ -168,24 +174,28 @@ func GetDockerLabels(containerID string) (map[string]string, error) {
 
 // MapPIDToProject determines the project for a given process.
 func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) string {
-	baseInfo, err := p.Info()
-	if err != nil {
-		log.Printf("mapper: failed to get basic process info for PID %d: %v", p.PID(), err)
-	}
+	baseInfo, baseInfoErr := p.Info()
 
 	userName := ""
-	userInfo, err := p.User()
-	if err != nil {
-		log.Printf("mapper: could not get user info for process PID %d: %v", p.PID(), err)
+	userInfo, userErr := p.User()
+	if userErr != nil {
+		log.Printf("mapper: could not get user info for process PID %d: %v", p.PID(), userErr)
 	} else {
-		userName = userInfo.Username
+		u, lookupErr := user.LookupId(userInfo.UID)
+		if lookupErr != nil {
+			log.Printf("mapper: could not lookup username for UID %s (PID %d): %v", userInfo.UID, p.PID(), lookupErr)
+		} else {
+			userName = u.Username
+		}
 	}
 
 	processName := ""
 	var processArgs []string
-	if baseInfo != nil {
+	if baseInfoErr == nil {
 		processName = baseInfo.Name
 		processArgs = baseInfo.Args
+	} else {
+		log.Printf("mapper: failed to get basic process info for PID %d: %v", p.PID(), baseInfoErr)
 	}
 
 	pinfo := struct {
@@ -199,7 +209,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 	}
 
 	currentPID := p.PID()
-	if baseInfo != nil {
+	if baseInfoErr == nil {
 		currentPID = baseInfo.PID
 	}
 
