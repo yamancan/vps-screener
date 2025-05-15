@@ -25,7 +25,7 @@ rm go1.21.6.linux-amd64.tar.gz
 echo "Setting up Go environment..."
 export GOROOT=/usr/local/go
 export GOPATH=/root/go
-export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
 
 # Verify Go installation
 echo "Verifying Go installation..."
@@ -34,7 +34,12 @@ if ! command -v go &> /dev/null; then
     exit 1
 fi
 
-go version
+# Force using the new Go version
+/usr/local/go/bin/go version
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to verify Go installation"
+    exit 1
+fi
 
 # Clean up any existing installation
 echo "Cleaning up old files..."
@@ -91,8 +96,8 @@ find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/|vps-agent/|g' {}
 
 # Build the agent
 echo "Building agent..."
-go mod tidy
-if ! go build -v -o vps-agent .; then
+/usr/local/go/bin/go mod tidy
+if ! /usr/local/go/bin/go build -v -o vps-agent .; then
     echo "Error: Failed to build agent"
     exit 1
 fi
