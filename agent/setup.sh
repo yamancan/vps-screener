@@ -92,7 +92,19 @@ find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/|vps-agent/|g' {}
 # Build the agent
 echo "Building agent..."
 go mod tidy
-go build -o vps-agent .
+if ! go build -v -o vps-agent .; then
+    echo "Error: Failed to build agent"
+    exit 1
+fi
+
+# Verify binary exists
+if [ ! -f vps-agent ]; then
+    echo "Error: Binary was not created"
+    exit 1
+fi
+
+# Make binary executable
+chmod +x vps-agent
 
 # Start the agent
 echo "Starting agent..."
@@ -103,7 +115,12 @@ sleep 2
 
 # Check if agent is running
 echo "Checking if agent is running..."
-ps aux | grep vps-agent
+if ! ps aux | grep -v grep | grep vps-agent > /dev/null; then
+    echo "Error: Agent failed to start"
+    echo "Recent logs:"
+    tail -n 20 agent.log
+    exit 1
+fi
 
 # Show logs
 echo "Recent logs:"
