@@ -24,12 +24,6 @@ rm -rf /usr/local/go
 tar -C /usr/local -xzf go1.16.15.linux-amd64.tar.gz
 rm go1.16.15.linux-amd64.tar.gz
 
-# Set up Go environment
-echo "Setting up Go environment..."
-export GOROOT=/usr/local/go
-export GOPATH=/root/go
-export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
-
 # Verify Go installation
 echo "Verifying Go installation..."
 if [ ! -f /usr/local/go/bin/go ]; then
@@ -37,6 +31,14 @@ if [ ! -f /usr/local/go/bin/go ]; then
     exit 1
 fi
 
+# Set up Go environment
+echo "Setting up Go environment..."
+export GOROOT=/usr/local/go
+export GOPATH=/root/go
+export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
+
+# Verify Go version
+echo "Verifying Go version..."
 /usr/local/go/bin/go version
 if [ $? -ne 0 ]; then
     echo "Error: Failed to verify Go installation"
