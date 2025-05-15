@@ -10,10 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/elastic/go-sysinfo"
+	"github.com/elastic/go-sysinfo/types"
 
 	"vps-screener/agent/config"
 	"vps-screener/agent/mapper" // Import the mapper package
@@ -73,28 +71,42 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 	metrics := make(CollectedMetrics)
 
 	// 1. Overall System Metrics
-	cpuSys, _ := cpu.Percent(0, false) // interval 0, per CPU false (total)
-	vm, _ := mem.VirtualMemory()
-	d, _ := disk.Usage("/") // Root disk usage, make configurable if needed
+	host, err := sysinfo.Host()
+	if err != nil {
+		log.Printf("Error getting host info: %v", err)
+		return metrics
+	}
 
-	metrics["_system"] = MetricData{
-		CPUPercent:  cpuSys[0], // cpu.Percent returns a slice
-		RAMPercent:  float32(vm.UsedPercent),
-		DiskPercent: d.UsedPercent,
+	cpuInfo, err := host.CPUTime()
+	if err != nil {
+		log.Printf("Error getting CPU info: %v", err)
+	} else {
+		metrics["_system"] = MetricData{
+			CPUPercent: cpuInfo.User + cpuInfo.System,
+		}
+	}
+
+	memInfo, err := host.Memory()
+	if err != nil {
+		log.Printf("Error getting memory info: %v", err)
+	} else {
+		systemMetrics := metrics["_system"]
+		systemMetrics.RAMPercent = float32(float64(memInfo.Used) / float64(memInfo.Total) * 100)
+		metrics["_system"] = systemMetrics
 	}
 
 	// 2. Per-Project Metrics
-	procs, err := process.Processes()
+	processes, err := sysinfo.Processes()
 	if err != nil {
 		log.Printf("Error getting process list: %v", err)
-		return metrics // Return system metrics at least
+		return metrics
 	}
 
 	// Track which projects we've processed plugins for
 	processedPlugins := make(map[string]bool)
 
-	for _, p := range procs {
-		projectName := mapper.MapPIDToProject(p, cfg.Projects) // Use the mapper
+	for _, p := range processes {
+		projectName := mapper.MapPIDToProject(p, cfg.Projects)
 
 		// Ensure project entry exists
 		currentProjectMetrics, ok := metrics[projectName]
@@ -104,14 +116,24 @@ func CollectMetrics(cfg *config.Config) CollectedMetrics {
 			}
 		}
 
-		// Aggregate metrics
-		cpuProc, _ := p.CPUPercent()
-		currentProjectMetrics.CPUPercent += cpuProc
+		// Get process info
+		procInfo, err := p.Info()
+		if err != nil {
+			continue
+		}
 
-		memInfo, _ := p.MemoryInfo()
-		if memInfo != nil {
+		// Get CPU usage
+		cpuInfo, err := p.CPUTime()
+		if err == nil {
+			currentProjectMetrics.CPUPercent += cpuInfo.User + cpuInfo.System
+		}
+
+		// Get memory usage
+		memInfo, err := p.Memory()
+		if err == nil {
 			currentProjectMetrics.RAMBytes += memInfo.RSS
 		}
+
 		currentProjectMetrics.ProcessCount++
 
 		// Execute plugin if configured and not yet executed for this project

@@ -85,11 +85,31 @@ print(json.dumps(data))
 In `config.yaml`, specify the plugin path for a project:
 
 ```yaml
+# VPS Agent Configuration Example
+
+# API Gateway connection details
+api_gateway:
+  url: http://localhost:3000/v1/metrics  # Test için localhost
+  token: test-token-123  # Test için basit bir token
+
+# Metrics collection interval in seconds
+interval: 30
+
+# Project configurations
 projects:
-  my_project:
+  # Örnek: nginx servisi
+  nginx:
     match:
-      systemd_service: my-app.service
-    plugin: plugins/my_metrics.py  # Path relative to agent directory
+      systemd_service: nginx.service
+      user: www-data
+    plugin: plugins/sample_plugin.py
+
+  # Örnek: Docker container
+  docker_app:
+    match:
+      docker_label: com.mycompany.project=docker-app
+      docker_container_name: app-container
+    plugin: plugins/sample_plugin.py
 ```
 
 ### Plugin Execution

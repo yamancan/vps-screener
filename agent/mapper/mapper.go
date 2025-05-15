@@ -11,7 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/elastic/go-sysinfo"
+	"github.com/elastic/go-sysinfo/types"
 	"vps-screener/agent/config" // Importing our own config package
 )
 
@@ -78,12 +79,15 @@ func GetSystemdServiceForPid(pid int32) (string, error) {
 
 // Helper to get username, used to filter out generic user services
 func procUsername(pid int32) string {
-	p, err := process.NewProcess(pid)
+	p, err := sysinfo.ProcessByPID(int(pid))
 	if err != nil {
 		return ""
 	}
-	username, _ := p.Username()
-	return username
+	info, err := p.Info()
+	if err != nil {
+		return ""
+	}
+	return info.Username
 }
 
 // GetDockerContainerIDForPid attempts to find the Docker container ID for a PID.
@@ -161,31 +165,36 @@ func GetDockerLabels(containerID string) (map[string]string, error) {
 }
 
 // MapPIDToProject determines the project for a given process.
-func MapPIDToProject(p *process.Process, projectsConfig []config.ProjectConfig) string {
-	pinfo := struct { // Consolidate info gathering
+func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) string {
+	info, err := p.Info()
+	if err != nil {
+		return ""
+	}
+
+	pinfo := struct {
 		Name     string
 		Username string
 		CmdLine  string
 	}{
-		Name: func() string { name, _ := p.Name(); return name }(),
-		Username: func() string { username, _ := p.Username(); return username }(),
-		CmdLine: func() string { cmdline, _ := p.Cmdline(); return cmdline }(),
+		Name:     info.Name,
+		Username: info.Username,
+		CmdLine:  strings.Join(info.Args, " "),
 	}
 
 	for _, proj := range projectsConfig {
 		match := proj.Match
 		// 1. Systemd Unit
 		if match.SystemdUnit != "" {
-			systemdService, _ := GetSystemdServiceForPid(p.Pid)
+			systemdService, _ := GetSystemdServiceForPid(info.PID)
 			if systemdService == match.SystemdUnit {
-				log.Printf("PID %d (%s) matched project '%s' by systemd unit: %s", p.Pid, pinfo.Name, proj.Name, systemdService)
+				log.Printf("PID %d (%s) matched project '%s' by systemd unit: %s", info.PID, pinfo.Name, proj.Name, systemdService)
 				return proj.Name
 			}
 		}
 
 		// 2. Docker Label
 		if match.DockerLabel != "" {
-			containerID, _ := GetDockerContainerIDForPid(p.Pid)
+			containerID, _ := GetDockerContainerIDForPid(info.PID)
 			if containerID != "" {
 				labels, err := GetDockerLabels(containerID)
 				if err == nil && labels != nil {
@@ -196,35 +205,37 @@ func MapPIDToProject(p *process.Process, projectsConfig []config.ProjectConfig) 
 						expectedValue = labelKeyVal[1]
 					}
 					if val, ok := labels[labelKey]; ok && (len(labelKeyVal) == 1 || val == expectedValue) {
-						log.Printf("PID %d (%s) matched project '%s' by Docker label: %s=%s", p.Pid, pinfo.Name, proj.Name, labelKey, val)
+						log.Printf("PID %d (%s) matched project '%s' by Docker label: %s=%s", info.PID, pinfo.Name, proj.Name, labelKey, val)
 						return proj.Name
 					}
 				}
 			}
 		}
 
-		// 3. Username
-		if match.User != "" && pinfo.Username == match.User {
-			log.Printf("PID %d (%s) matched project '%s' by user: %s", p.Pid, pinfo.Name, proj.Name, pinfo.Username)
-			return proj.Name
-		}
-
-		// 4. Process Name Pattern
-		if match.ProcessNamePattern != "" {
-			compiledRegex, err := regexp.Compile(match.ProcessNamePattern)
-			if err != nil {
-				log.Printf("Invalid regex pattern for project %s: %s - %v", proj.Name, match.ProcessNamePattern, err)
-				continue
-			}
-			// Check against process name or full command line for more flexibility
-			if compiledRegex.MatchString(pinfo.Name) || compiledRegex.MatchString(pinfo.CmdLine) {
-				log.Printf("PID %d (%s) matched project '%s' by process pattern: %s", p.Pid, pinfo.Name, proj.Name, match.ProcessNamePattern)
+		// 3. Process Name
+		if match.ProcessName != "" {
+			if pinfo.Name == match.ProcessName {
+				log.Printf("PID %d (%s) matched project '%s' by process name", info.PID, pinfo.Name, proj.Name)
 				return proj.Name
 			}
 		}
 
-		// TODO: Container Name Pattern (requires docker inspect to get container name from ID)
+		// 4. Username
+		if match.Username != "" {
+			if pinfo.Username == match.Username {
+				log.Printf("PID %d (%s) matched project '%s' by username: %s", info.PID, pinfo.Name, proj.Name, pinfo.Username)
+				return proj.Name
+			}
+		}
+
+		// 5. Command Line
+		if match.CmdLine != "" {
+			if strings.Contains(pinfo.CmdLine, match.CmdLine) {
+				log.Printf("PID %d (%s) matched project '%s' by command line: %s", info.PID, pinfo.Name, proj.Name, match.CmdLine)
+				return proj.Name
+			}
+		}
 	}
 
-	return "unassigned"
+	return ""
 } 
