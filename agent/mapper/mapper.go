@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
 	"strings"
 	"sync"
@@ -87,7 +88,16 @@ func procUsername(pid int32) string {
 	if err != nil {
 		return ""
 	}
-	return info.User.Username
+	// Attempt to get username via UID lookup
+	// Assuming info.UID is available and is a string (common in go-sysinfo)
+	if info.UID != "" {
+		u, err := user.LookupId(info.UID)
+		if err == nil {
+			return u.Username
+		}
+		log.Printf("mapper: could not lookup username for UID %s: %v", info.UID, err)
+	}
+	return "" // Fallback if UID is empty or lookup fails
 }
 
 // GetDockerContainerIDForPid attempts to find the Docker container ID for a PID.
@@ -171,13 +181,23 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		return ""
 	}
 
+	username := ""
+	if info.UID != "" {
+		u, err := user.LookupId(info.UID)
+		if err == nil {
+			username = u.Username
+		} else {
+			log.Printf("mapper: could not lookup username for PID %d, UID %s: %v", info.PID, info.UID, err)
+		}
+	}
+
 	pinfo := struct {
 		Name     string
 		Username string
 		CmdLine  string
 	}{
 		Name:     info.Name,
-		Username: info.User.Username,
+		Username: username,
 		CmdLine:  strings.Join(info.Args, " "),
 	}
 
