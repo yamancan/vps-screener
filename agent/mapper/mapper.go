@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"regexp"
 	"strings"
 	"sync"
@@ -82,22 +81,15 @@ func GetSystemdServiceForPid(pid int32) (string, error) {
 func procUsername(pid int32) string {
 	p, err := sysinfo.Process(int(pid))
 	if err != nil {
+		log.Printf("mapper: failed to get process for PID %d: %v", pid, err)
 		return ""
 	}
-	info, err := p.Info()
+	userInfo, err := p.User()
 	if err != nil {
+		log.Printf("mapper: failed to get user info for PID %d: %v", pid, err)
 		return ""
 	}
-	// Attempt to get username via UID lookup
-	// Assuming info.UID is available and is a string (common in go-sysinfo)
-	if info.UID != "" {
-		u, err := user.LookupId(info.UID)
-		if err == nil {
-			return u.Username
-		}
-		log.Printf("mapper: could not lookup username for UID %s: %v", info.UID, err)
-	}
-	return "" // Fallback if UID is empty or lookup fails
+	return userInfo.Username
 }
 
 // GetDockerContainerIDForPid attempts to find the Docker container ID for a PID.
@@ -176,19 +168,24 @@ func GetDockerLabels(containerID string) (map[string]string, error) {
 
 // MapPIDToProject determines the project for a given process.
 func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) string {
-	info, err := p.Info()
+	baseInfo, err := p.Info()
 	if err != nil {
-		return ""
+		log.Printf("mapper: failed to get basic process info for PID %d: %v", p.PID(), err)
 	}
 
-	username := ""
-	if info.UID != "" {
-		u, err := user.LookupId(info.UID)
-		if err == nil {
-			username = u.Username
-		} else {
-			log.Printf("mapper: could not lookup username for PID %d, UID %s: %v", info.PID, info.UID, err)
-		}
+	userName := ""
+	userInfo, err := p.User()
+	if err != nil {
+		log.Printf("mapper: could not get user info for process PID %d: %v", p.PID(), err)
+	} else {
+		userName = userInfo.Username
+	}
+
+	processName := ""
+	var processArgs []string
+	if baseInfo != nil {
+		processName = baseInfo.Name
+		processArgs = baseInfo.Args
 	}
 
 	pinfo := struct {
@@ -196,25 +193,30 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		Username string
 		CmdLine  string
 	}{
-		Name:     info.Name,
-		Username: username,
-		CmdLine:  strings.Join(info.Args, " "),
+		Name:     processName,
+		Username: userName,
+		CmdLine:  strings.Join(processArgs, " "),
+	}
+
+	currentPID := p.PID()
+	if baseInfo != nil {
+		currentPID = baseInfo.PID
 	}
 
 	for _, proj := range projectsConfig {
 		match := proj.Match
 		// 1. Systemd Unit
 		if match.SystemdUnit != "" {
-			systemdService, _ := GetSystemdServiceForPid(int32(info.PID))
+			systemdService, _ := GetSystemdServiceForPid(int32(currentPID))
 			if systemdService == match.SystemdUnit {
-				log.Printf("PID %d (%s) matched project '%s' by systemd unit: %s", info.PID, pinfo.Name, proj.Name, systemdService)
+				log.Printf("PID %d (%s) matched project '%s' by systemd unit: %s", currentPID, pinfo.Name, proj.Name, systemdService)
 				return proj.Name
 			}
 		}
 
 		// 2. Docker Label
 		if match.DockerLabel != "" {
-			containerID, _ := GetDockerContainerIDForPid(int32(info.PID))
+			containerID, _ := GetDockerContainerIDForPid(int32(currentPID))
 			if containerID != "" {
 				labels, err := GetDockerLabels(containerID)
 				if err == nil && labels != nil {
@@ -225,7 +227,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 						expectedValue = labelKeyVal[1]
 					}
 					if val, ok := labels[labelKey]; ok && (len(labelKeyVal) == 1 || val == expectedValue) {
-						log.Printf("PID %d (%s) matched project '%s' by Docker label: %s=%s", info.PID, pinfo.Name, proj.Name, labelKey, val)
+						log.Printf("PID %d (%s) matched project '%s' by Docker label: %s=%s", currentPID, pinfo.Name, proj.Name, labelKey, val)
 						return proj.Name
 					}
 				}
@@ -235,7 +237,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		// 3. Process Name
 		if match.ProcessNamePattern != "" {
 			if pinfo.Name == match.ProcessNamePattern {
-				log.Printf("PID %d (%s) matched project '%s' by process name pattern", info.PID, pinfo.Name, proj.Name)
+				log.Printf("PID %d (%s) matched project '%s' by process name pattern", currentPID, pinfo.Name, proj.Name)
 				return proj.Name
 			}
 		}
@@ -243,7 +245,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		// 4. Username
 		if match.Username != "" {
 			if pinfo.Username == match.Username {
-				log.Printf("PID %d (%s) matched project '%s' by username: %s", info.PID, pinfo.Name, proj.Name, pinfo.Username)
+				log.Printf("PID %d (%s) matched project '%s' by username: %s", currentPID, pinfo.Name, proj.Name, pinfo.Username)
 				return proj.Name
 			}
 		}
