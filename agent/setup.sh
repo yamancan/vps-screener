@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e  # Exit on any error
+set -x  # Print commands as they are executed
+
 echo "Starting VPS Agent setup..."
 
 # Wait for any existing apt process to finish
@@ -83,17 +86,27 @@ find . -name "*.go" -type f -exec sed -i 's|vps-screener/agent/|vps-agent/|g' {}
 
 # Build the agent
 echo "Building agent..."
+echo "Current directory: $(pwd)"
+echo "Directory contents:"
+ls -la
+
+echo "Running go mod tidy..."
 go mod tidy
-if ! go build -v -o vps-agent .; then
-    echo "Error: Failed to build agent"
+
+echo "Building with verbose output..."
+go build -v -o vps-agent .
+
+echo "Checking if binary was created..."
+if [ ! -f vps-agent ]; then
+    echo "Error: Binary was not created"
+    echo "Directory contents after build:"
+    ls -la
     exit 1
 fi
 
-# Verify binary exists
-if [ ! -f vps-agent ]; then
-    echo "Error: Binary was not created"
-    exit 1
-fi
+echo "Binary details:"
+ls -l vps-agent
+file vps-agent
 
 # Make binary executable
 chmod +x vps-agent
