@@ -2,10 +2,25 @@
 
 echo "Starting VPS Agent setup..."
 
+# Wait for any existing apt process to finish
+echo "Waiting for any existing package manager processes..."
+while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 ; do
+    echo "Waiting for other package manager to finish..."
+    sleep 1
+done
+
 # Install required packages
 echo "Installing required packages..."
 apt-get update
-apt-get install -y git golang-go
+apt-get install -y git
+
+# Install Go from official source
+echo "Installing Go..."
+wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+rm go1.21.6.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+echo 'export PATH=$PATH:/usr/local/go/bin' >> /root/.bashrc
 
 # Clean up any existing installation
 echo "Cleaning up old files..."
