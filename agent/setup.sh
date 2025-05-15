@@ -94,7 +94,12 @@ echo "Running go mod tidy..."
 go mod tidy
 
 echo "Building with verbose output..."
-go build -v -o vps-agent .
+if ! go build -v -o vps-agent .; then
+    echo "Error: Build failed"
+    echo "Directory contents after failed build:"
+    ls -la
+    exit 1
+fi
 
 echo "Checking if binary was created..."
 if [ ! -f vps-agent ]; then
@@ -113,7 +118,10 @@ chmod +x vps-agent
 
 # Start the agent
 echo "Starting agent..."
-nohup ./vps-agent > agent.log 2>&1 &
+if ! nohup ./vps-agent > agent.log 2>&1 & then
+    echo "Error: Failed to start agent"
+    exit 1
+fi
 
 # Wait a moment for the agent to start
 sleep 2
