@@ -14,9 +14,16 @@ echo "Installing required packages..."
 apt-get update
 apt-get install -y git
 
+# Install Go
+echo "Installing Go..."
+wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+rm -rf /usr/local/go
+tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+rm go1.21.6.linux-amd64.tar.gz
+
 # Set up Go environment
 echo "Setting up Go environment..."
-export GOROOT=/root/go
+export GOROOT=/usr/local/go
 export GOPATH=/root/go
 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
@@ -73,8 +80,8 @@ require (
 	github.com/elastic/go-windows v1.0.0 // indirect
 	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	github.com/prometheus/procfs v0.12.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 )
 EOL
 
