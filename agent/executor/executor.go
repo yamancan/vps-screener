@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
-	"syscall" // For resource limits, though not fully implemented here yet
 	"time"
 
 	"vps-screener/agent/config"
@@ -67,7 +66,7 @@ func FetchTasks(cfg *config.Config) ([]Task, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := os.ReadAll(resp.Body)
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		log.Printf("Error fetching tasks from %s. Status: %s, Body: %s", tasksEndpoint, resp.Status, string(bodyBytes))
 		return nil, fmt.Errorf("API gateway at %s returned error status %s for tasks", tasksEndpoint, resp.Status)
 	}
@@ -190,7 +189,7 @@ func SendTaskResult(cfg *config.Config, taskID string, result TaskResult) error 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated { // Allow 200 or 201
-		bodyBytes, _ := os.ReadAll(resp.Body)
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		log.Printf("Error sending task result for %s. Status: %s, Body: %s", taskID, resp.Status, string(bodyBytes))
 		return fmt.Errorf("API gateway at %s returned error status %s for task result %s", resultEndpoint, resp.Status, taskID)
 	}

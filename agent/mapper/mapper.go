@@ -79,7 +79,7 @@ func GetSystemdServiceForPid(pid int32) (string, error) {
 
 // Helper to get username, used to filter out generic user services
 func procUsername(pid int32) string {
-	p, err := sysinfo.ProcessByPID(int(pid))
+	p, err := sysinfo.Process(int(pid))
 	if err != nil {
 		return ""
 	}
@@ -87,7 +87,7 @@ func procUsername(pid int32) string {
 	if err != nil {
 		return ""
 	}
-	return info.Username
+	return info.User.Username
 }
 
 // GetDockerContainerIDForPid attempts to find the Docker container ID for a PID.
@@ -177,7 +177,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		CmdLine  string
 	}{
 		Name:     info.Name,
-		Username: info.Username,
+		Username: info.User.Username,
 		CmdLine:  strings.Join(info.Args, " "),
 	}
 
@@ -185,7 +185,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 		match := proj.Match
 		// 1. Systemd Unit
 		if match.SystemdUnit != "" {
-			systemdService, _ := GetSystemdServiceForPid(info.PID)
+			systemdService, _ := GetSystemdServiceForPid(int32(info.PID))
 			if systemdService == match.SystemdUnit {
 				log.Printf("PID %d (%s) matched project '%s' by systemd unit: %s", info.PID, pinfo.Name, proj.Name, systemdService)
 				return proj.Name
@@ -194,7 +194,7 @@ func MapPIDToProject(p types.Process, projectsConfig []config.ProjectConfig) str
 
 		// 2. Docker Label
 		if match.DockerLabel != "" {
-			containerID, _ := GetDockerContainerIDForPid(info.PID)
+			containerID, _ := GetDockerContainerIDForPid(int32(info.PID))
 			if containerID != "" {
 				labels, err := GetDockerLabels(containerID)
 				if err == nil && labels != nil {
